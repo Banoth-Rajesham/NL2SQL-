@@ -20,20 +20,25 @@ cur.execute("CREATE TABLE IF NOT EXISTS invoices (id INTEGER PRIMARY KEY, patien
 def rand_date(days=365):
     return (datetime.now() - timedelta(days=random.randint(0, days))).strftime("%Y-%m-%d")
 
-cities = ["Hyd", "Mumbai", "Delhi", "Chennai", "BLR"]
-specs = ["Cardio", "Derm", "Ortho", "Pedia", "General"]
+cities = ["Hyderabad","Mumbai","Delhi","Chennai","Bangalore","Pune","Kolkata","Ahmedabad","Jaipur","Surat"]
+specs = ["Cardiology","Dermatology","Orthopedics","Pediatrics","General"]
 
 # ---------- DOCTORS ----------
 for i in range(1, 16):
-    cur.execute("INSERT INTO doctors VALUES (NULL, ?, ?, ?, ?)", 
-                (f"Dr{i}", specs[i % 5], specs[i % 5], f"9000{i:04d}"))
+    cur.execute("INSERT INTO doctors VALUES (NULL, ?, ?, ?, ?)", (
+        f"Dr Name{i}",
+        specs[i % 5],
+        specs[i % 5],
+        f"9000{i:04d}"
+    ))
 
 # ---------- PATIENTS ----------
 for i in range(1, 201):
     cur.execute("INSERT INTO patients VALUES (NULL, ?, ?, ?, ?, ?, ?, ?, ?)", (
-        f"F{i}", f"L{i}",
-        f"u{i}@mail.com" if i % 10 else None,
-        f"9999{i:04d}" if i % 15 else None,
+        f"User{i}",
+        f"Test{i}",
+        f"user{i}@mail.com" if i % 10 != 0 else None,
+        f"9999{i:04d}" if i % 15 != 0 else None,
         rand_date(8000),
         random.choice(["M", "F"]),
         random.choice(cities),
@@ -46,8 +51,8 @@ for _ in range(500):
         random.randint(1, 200),
         random.randint(1, 15),
         rand_date(),
-        random.choice(["Completed", "Cancelled", "Scheduled", "No-Show"]),
-        "note" if random.choice([0,1]) else None
+        random.choice(["Completed","Cancelled","Scheduled","No-Show"]),
+        "notes" if random.choice([0,1]) else None
     ))
 
 # ---------- TREATMENTS ----------
@@ -56,7 +61,7 @@ ids = [r[0] for r in cur.execute("SELECT id FROM appointments WHERE status='Comp
 for _ in range(350):
     cur.execute("INSERT INTO treatments VALUES (NULL, ?, ?, ?, ?)", (
         random.choice(ids) if ids else random.randint(1, 500),
-        f"T{random.randint(1,5)}",
+        f"Treatment{random.randint(1,5)}",
         random.randint(50, 5000),
         random.choice([15,30,45,60])
     ))
@@ -64,7 +69,7 @@ for _ in range(350):
 # ---------- INVOICES ----------
 for _ in range(300):
     total = random.randint(50, 5000)
-    status = random.choice(["Paid", "Pending", "Overdue"])
+    status = random.choice(["Paid","Pending","Overdue"])
     paid = total if status == "Paid" else random.randint(0, total)
 
     cur.execute("INSERT INTO invoices VALUES (NULL, ?, ?, ?, ?, ?)", (
@@ -79,4 +84,5 @@ for _ in range(300):
 conn.commit()
 conn.close()
 
-print("Done 👍")
+# ---------- SUMMARY ----------
+print("Created 200 patients, 15 doctors, 500 appointments, 350 treatments, 300 invoices ✅")
