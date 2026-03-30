@@ -37,11 +37,9 @@ original_run_sql = db.run_sql
 def safe_run_sql(sql):
     sql_upper = sql.upper()
 
-    # allow only SELECT
     if not sql_upper.strip().startswith("SELECT"):
         return "Only SELECT allowed"
 
-    # block dangerous words
     bad_words = ["INSERT","UPDATE","DELETE","DROP","ALTER","EXEC","XP_","SP_","GRANT","REVOKE","SHUTDOWN","SQLITE_MASTER"]
     if any(w in sql_upper for w in bad_words):
         return "Dangerous SQL blocked"
@@ -51,7 +49,6 @@ def safe_run_sql(sql):
     except Exception as e:
         return str(e)
 
-# replace default
 db.run_sql = safe_run_sql
 
 # ---------- MEMORY ----------
@@ -63,9 +60,9 @@ tools = ToolRegistry()
 tools.register_local_tool(RunSqlTool(db), access_groups=[])
 tools.register_local_tool(VisualizeDataTool(), access_groups=[])
 
-# memory tools
-tools.register_local_tool(SaveQuestionToolArgsTool(memory), access_groups=[])
-tools.register_local_tool(SearchSavedCorrectToolUsesTool(memory), access_groups=[])
+# ✅ FIXED HERE (no memory argument)
+tools.register_local_tool(SaveQuestionToolArgsTool(), access_groups=[])
+tools.register_local_tool(SearchSavedCorrectToolUsesTool(), access_groups=[])
 
 # ---------- AGENT ----------
 agent = Agent(
@@ -75,31 +72,41 @@ agent = Agent(
     user_resolver=SimpleUserResolver()
 )
 
-# ---------- LOAD SCHEMA (SIMPLE) ----------
+# ---------- LOAD SCHEMA ----------
 def load_schema():
     conn = sqlite3.connect("clinic.db")
     cur = conn.cursor()
 
     tables = cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
 
-    text = ""
+    schema_text = "Database Schema:\n\n"
     for t in tables:
         name = t[0]
         cols = cur.execute(f"PRAGMA table_info({name})").fetchall()
 
-        text += f"{name}: "
-        text += ", ".join([c[1] for c in cols])
-        text += "\n"
+        schema_text += f"{name} table:\n"
+        for c in cols:
+            schema_text += f"  - {c[1]} ({c[2]})\n"
+        schema_text += "\n"
 
     conn.close()
 
+    # Store schema so it's used by the agent
+    db.schema_description = schema_text
+    
+    # Also store in agent if possible
     try:
-        memory.add({"role": "system", "content": text})
+        if hasattr(agent, 'context'):
+            agent.context = schema_text
     except:
         pass
 
-# load schema
 load_schema()
+
+# Helper to get schema
+def get_schema_for_llm():
+    """Get schema text for LLM context"""
+    return db.schema_description if hasattr(db, 'schema_description') else ""
 
 # ---------- TEST ----------
 async def test():
